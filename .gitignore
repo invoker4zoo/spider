@@ -99,3 +99,11 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# log file
+*.log
+**/*.log
+log/
+
+# setting
+setting/cookies.pkl

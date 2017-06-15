@@ -12,7 +12,7 @@ import pickle
 import time
 
 
-COOKIES_SAVE_PATH = 'settings/cookies.pkl'
+COOKIES_SAVE_PATH = 'setting/cookies.pkl'
 
 
 def is_number(s):
@@ -109,7 +109,10 @@ class WeiBoScraper(object):
         try:
             selector = etree.HTML(self.html)
             self.user_name = selector.xpath('//table//div[@class="ut"]/span[1]/text()')[0]
-            print('current user name is: {}'.format(self.user_name))
+            # name encode 6-15
+            # self.user_name = self.user_name.decode('gb2312').encode('utf-8')
+            # print('current user name is: {}'.format(self.user_name))
+            print('current user name is: %s'%self.user_name)
         except Exception as e:
             print(e)
             print('html not properly loaded, maybe cookies out of date or account being banned. '
@@ -288,9 +291,10 @@ class WeiBoScraper(object):
 
 
 def main():
-    user_id = 1669879400
+    user_id = 5019589537
+    uuid = 1669879400
     filter_flag = 1
-    wb = WeiBoScraper(user_id, filter_flag)
+    wb = WeiBoScraper(user_id, uuid, filter_flag)
     wb.crawl()
     print(u'用户名：', wb.user_name)
     print(u'全部微博数：', str(wb.weibo_num))
