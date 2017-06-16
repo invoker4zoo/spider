@@ -2,6 +2,7 @@
 
 import pickle
 import os
+import time
 
 # if os.path.exists('../setting'):
 #     pass
@@ -17,3 +18,7 @@ def is_number(s):
         return True
     except ValueError as e:
         return False
+def now():
+    time_format = '%Y-%m-%d %X'
+    return time.strftime(time_format,time.localtime())
+
