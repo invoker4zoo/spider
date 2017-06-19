@@ -33,6 +33,7 @@ class WeiboCrawler(object):
         self.user_id = uuid
         self.filter = filter_flag
         self.user_info = {
+            'userId': self.user_id,
             'userName': '',
             'weiboNum': 0,
             'weiboOriginalNum': 0,
@@ -48,7 +49,7 @@ class WeiboCrawler(object):
         self.weibo_content = {
             'url': '',
             'numZan': 0,
-            'numForwarding': 0,
+            'numForward': 0,
             'numComment': 0,
             'content': ''
         }
@@ -101,7 +102,7 @@ class WeiboCrawler(object):
         try:
             selector = etree.HTML(self.html)
             self.user_info['userName'] = selector.xpath('//table//div[@class="ut"]/span[1]/text()')[0]
-            logger.info('user name is %s'%self.user_name)
+            logger.info('user name is %s'%self.user_info['userName'])
         except Exception as e:
             logger.error('getting user name failed for:{}'.format(str(e)))
 
@@ -146,7 +147,7 @@ class WeiboCrawler(object):
                     html2 = requests.get(url2, cookies=self.cookie, headers=self.headers).content
                     selector2 = etree.HTML(html2)
                     info = selector2.xpath("//div[@class='c']")
-                    logger.info('crawl No.{} page for user [{}]'.format(page,self.user_info['userName']))
+                    logger.info('crawl No.%d page for user %s'%(page,self.user_info['userName']))
 
                     if page % 10 == 0:
                         logger.info('sleeping for 5 minutes to avoid being banned')
@@ -157,11 +158,13 @@ class WeiboCrawler(object):
                         single_content['userId'] = self.user_id
                         for i in range(0, len(info) - 2):
                             detail = info[i].xpath("@id")[0]
+                            # need mongo _id
+                            single_content['_id'] = detail.split('_')[-1] + str(self.user_id)
                             single_content['url'] = 'http://weibo.cn/comment/{}?uid={}&rl=0'.\
                                                           format(detail.split('_')[-1], self.user_id)
                             self.weibo_detail_urls.append(single_content['url'])
 
-                            single_content['weiboOriginalNum'] += 1
+                            self.user_info['weiboOriginalNum'] += 1
                             str_t = info[i].xpath("div/span[@class='ctt']")
                             weibos = str_t[0].xpath('string(.)')
                             single_content['content'] = weibos
@@ -184,29 +187,48 @@ class WeiboCrawler(object):
 
                             # save single_content
                             self._weibo_single_content_saved(single_content)
-                            logger.info('get weibo content success:{}'.format(single_content))
-
-            except etree.XMLSyntaxError as e:
+                            # logger.info('get weibo content success:{}'.format(single_content))
+                logger.info('get weibo info done, current user {}'.format(self.user_id))
+            except Exception as e:
                 logger.error('parsed weibo html failed for:{}'.format(str(e)))
+
             # if self.filter == 0:
             #     print(u'共' + str(self.weibo_scraped) + u'条微博')
             #
             # else:
             #     print(u'共' + str(self.weibo_num) + u'条微博，其中' + str(self.weibo_scraped) + u'条为原创微博')
-        except IndexError as e:
-            logger.error('get weibo info done, current user {} has no weibo yet.'.format(self.user_id))
+        except Exception as e:
+            logger.error('get user {} weibo info failed for {}'.format(self.user_id,str(e)))
 
     def _weibo_user_info_saved(self, user_info):
-        pass
+        user_info['updateTime'] = now()
+        try:
+            old_data = MONGO[DB_NAME][COLL_NAME_USER].find_one({'userId':user_info['userId']})
+            if not old_data:
+                MONGO[DB_NAME][COLL_NAME_USER].insert_one(user_info)
+                logger.info('insert user info for{}'.format(user_info['userId']))
+            else:
+                MONGO[DB_NAME][COLL_NAME_USER].find_one_and_update(
+                    {'userId':user_info['userId']},
+                    {'$set':user_info}
+                )
+                logger.info('update user info for {}'.format(user_info['userId']))
+        except Exception as e:
+            logger.error('saving weibo content info failed for:{}'.format(str(e)))
 
     def _weibo_single_content_saved(self, single_content):
         single_content['updateTime'] = now()
         try:
-            old_data = MONGO[DB_NAME][COLL_NAME_CONTENT].find_one({'url':single_content['url']})
+            old_data = MONGO[DB_NAME][COLL_NAME_CONTENT].find_one({'_id':single_content['_id']})
             if not old_data:
-                pass
+                MONGO[DB_NAME][COLL_NAME_CONTENT].insert_one(single_content)
+                logger.info('insert content for user {} with url {}'.format(single_content['userId'],single_content['url']))
             else:
-                pass
+                MONGO[DB_NAME][COLL_NAME_CONTENT].find_one_and_update(
+                    {'_id':single_content['_id']},
+                    {'$set':single_content}
+                )
+                logger.info('update content with url {}'.format(single_content['url']))
         except Exception as e:
             logger.error('saving weibo content info failed for:{}'.format(str(e)))
 
