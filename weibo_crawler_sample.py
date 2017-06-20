@@ -66,10 +66,11 @@ class WeiboCrawler(object):
             with open(COOKIES_SAVE_PATH, 'rb') as f:
                 cookies_dict = pickle.load(f)
             cookies = cookies_dict[self.using_account]
-            cookie = {
-                "Cookie": cookies
-            }
-            self.cookie = cookie
+            # debug cookies format
+            # cookie = {
+            #     "Cookie": cookies
+            # }
+            self.cookie = cookies
         except Exception as e:
             logger.error('intial cookies failed for:' + str(e))
 
@@ -254,7 +255,7 @@ class WeiboCrawler(object):
 
 
 if __name__ == '__main__':
-    user_id = 5019589537
+    user_id = '412214410@qq.com'
     uuid = 1669879400
     filter_flag = 1
     wb = WeiboCrawler(user_id, uuid, filter_flag)

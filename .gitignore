@@ -110,3 +110,6 @@ setting/cookies.pkl
 
 # .dat
 *.dat
+
+# .idear
+.idea/*
