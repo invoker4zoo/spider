@@ -1,15 +1,5 @@
 #coding=utf8
 
-'''
-Created on Mar 18, 2013
-@author: yoyzhou
-'''
-
-'''
-Updated on APril 16, 2014
-@author: wanghaisheng
-'''
-
 import os
 import sys
 import urllib
@@ -21,14 +11,10 @@ import hashlib
 import json
 import rsa
 import binascii
+import requests
+import pickle
 
-
-
-
-__prog__= "weibo_login"
-__site__= "http://yoyzhou.github.com"
-__weibo__= "@pigdata"
-__version__="0.1 beta"
+COOKIES_FILE_PATH = 'setting/cookies.pkl'
 
 
 def get_prelogin_status(username):
@@ -38,7 +24,12 @@ def get_prelogin_status(username):
     #prelogin_url = 'http://login.sina.com.cn/sso/prelogin.php?entry=weibo&callback=sinaSSOController.preloginCallBack&client=ssologin.js(v1.4.5)'
     prelogin_url = 'http://login.sina.com.cn/sso/prelogin.php?entry=weibo&callback=sinaSSOController.preloginCallBack&su=' + get_user(username) + \
      '&rsakt=mod&checkpin=1&client=ssologin.js(v1.4.11)';
-    data = urllib2.urlopen(prelogin_url).read()
+
+    # using requests
+    # data = urllib2.urlopen(prelogin_url).read()
+    response = requests.get(prelogin_url)
+    data = response.content
+
     p = re.compile('\((.*)\)')
 
     try:
@@ -53,34 +44,13 @@ def get_prelogin_status(username):
         return None
 
 
-def login(username, pwd, cookie_file):
+def _login(username, pwd, cookie_file):
     """"
         Login with use name, password and cookies.
         (1) If cookie file exists then try to load cookies;
         (2) If no cookies found then do login
     """
-    #If cookie file exists then try to load cookies
-    if os.path.exists(cookie_file):
-        try:
-            cookie_jar  = cookielib.LWPCookieJar(cookie_file)
-            cookie_jar.load(ignore_discard=True, ignore_expires=True)
-            loaded = 1
-        except cookielib.LoadError:
-            loaded = 0
-            print 'Loading cookies error'
-
-        #install loaded cookies for urllib2
-        if loaded:
-            cookie_support = urllib2.HTTPCookieProcessor(cookie_jar)
-            opener         = urllib2.build_opener(cookie_support, urllib2.HTTPHandler)
-            urllib2.install_opener(opener)
-            print 'Loading cookies success'
-            return 1
-        else:
-            return do_login(username, pwd, cookie_file)
-
-    else:   #If no cookies found
-        return do_login(username, pwd, cookie_file)
+    return do_login(username, pwd, cookie_file)
 
 
 def do_login(username,pwd,cookie_file):
@@ -112,10 +82,10 @@ def do_login(username,pwd,cookie_file):
         'returntype': 'META'
         }
 
-    cookie_jar2     = cookielib.LWPCookieJar()
-    cookie_support2 = urllib2.HTTPCookieProcessor(cookie_jar2)
-    opener2         = urllib2.build_opener(cookie_support2, urllib2.HTTPHandler)
-    urllib2.install_opener(opener2)
+    # cookie_jar2     = cookielib.LWPCookieJar()
+    # cookie_support2 = urllib2.HTTPCookieProcessor(cookie_jar2)
+    # opener2         = urllib2.build_opener(cookie_support2, urllib2.HTTPHandler)
+    # urllib2.install_opener(opener2)
     login_url = 'http://login.sina.com.cn/sso/login.php?client=ssologin.js(v1.4.11)'
     try:
         servertime, nonce, rsakv = get_prelogin_status(username)
@@ -129,20 +99,29 @@ def do_login(username,pwd,cookie_file):
     login_data['su'] = get_user(username)
     login_data['sp'] = get_pwd_rsa(pwd, servertime, nonce)
     login_data['rsakv'] = rsakv
-    login_data = urllib.urlencode(login_data)
+    # login_data = urllib.urlencode(login_data)
     http_headers = {'User-Agent':'Mozilla/5.0 (X11; Linux i686; rv:8.0) Gecko/20100101 Firefox/8.0'}
-    req_login  = urllib2.Request(
-        url = login_url,
-        data = login_data,
-        headers = http_headers
-    )
-    result = urllib2.urlopen(req_login)
-    text = result.read()
+    # trans to request
+    # req_login  = urllib2.Request(
+    #     url = login_url,
+    #     data = login_data,
+    #     headers = http_headers
+    # )
+    # # testing request/cookies part
+    session = requests.session()
+    reponse = session.post(login_url,data=login_data,headers=http_headers)
+    text = reponse.content
+
+
+    # result = urllib2.urlopen(req_login)
+    # text = result.read()
     p = re.compile('location\.replace\(\'(.*?)\'\)')
     try:
         #Search login redirection URL
-        login_url = p.search(text).group(1)
-        data = urllib2.urlopen(login_url).read()
+        trans_login_url = p.search(text).group(1)
+        _reponse = session.get(trans_login_url)
+        data = _reponse.content
+        cookies_dic = requests.utils.dict_from_cookiejar(session.cookies)
 
         # original url trans to another request
         p = re.compile("framelogin\=(.*)\&callback")
@@ -157,12 +136,16 @@ def do_login(username,pwd,cookie_file):
         # feedback = p.search(trans_data).group(1)
         # feedback_json = json.loads(feedback)
         if login_status:
-            cookie_jar2.save(cookie_file,ignore_discard=True, ignore_expires=True)
+            save_cookies(cookies_dic)
             return 1
         else:
             return 0
     except:
         return 0
+
+
+def save_cookies(cookies_dic):
+    pass
 
 
 def get_pwd_wsse(pwd, servertime, nonce):
@@ -174,6 +157,7 @@ def get_pwd_wsse(pwd, servertime, nonce):
     pwd3_ = pwd2 + servertime + nonce
     pwd3 = hashlib.sha1(pwd3_).hexdigest()
     return pwd3
+
 
 def get_pwd_rsa(pwd, servertime, nonce):
     """
@@ -210,7 +194,7 @@ if __name__ == '__main__':
     pwd = '4vYzvwdi'
     cookie_file = 'weibo_login_cookies.dat'
 
-    if login(username, pwd, cookie_file):
+    if _login(username, pwd, cookie_file):
         print 'Login WEIBO succeeded'
         #if you see the above message, then do whatever you want with urllib2, following is a example for fetch Kaifu's Weibo Home Page
         #Trying to fetch Kaifu Lee's Weibo home page
