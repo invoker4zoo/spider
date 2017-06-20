@@ -13,6 +13,7 @@ import rsa
 import binascii
 import requests
 import pickle
+from tools.logger import logger
 
 COOKIES_FILE_PATH = 'setting/cookies.pkl'
 
@@ -119,24 +120,16 @@ def do_login(username,pwd,cookie_file):
     try:
         #Search login redirection URL
         trans_login_url = p.search(text).group(1)
-        _reponse = session.get(trans_login_url)
-        data = _reponse.content
-        cookies_dic = requests.utils.dict_from_cookiejar(session.cookies)
-
-        # original url trans to another request
+        _response = session.get(trans_login_url)
         p = re.compile("framelogin\=(.*)\&callback")
-        # trans_login_url = p.search(data).group(1)
+        data = _response.content
         login_status = int(p.search(data).group(1))
-        # trans_data = urllib2.urlopen(trans_login_url).read()
-        #
-        # #Verify login feedback, check whether result is TRUE
-        # patt_feedback = 'feedBackUrlCallBack\((.*)\)'
-        # p = re.compile(patt_feedback, re.MULTILINE)
-        #
-        # feedback = p.search(trans_data).group(1)
-        # feedback_json = json.loads(feedback)
+        # visit testing page
+        testing_url = 'http://weibo.cn/u/1669879400?filter=0&page=1'
+        __response = session.get(testing_url)
+        cookies_dic = requests.utils.dict_from_cookiejar(session.cookies)
         if login_status:
-            save_cookies(cookies_dic)
+            save_cookies(cookies_dic,username)
             return 1
         else:
             return 0
@@ -144,8 +137,26 @@ def do_login(username,pwd,cookie_file):
         return 0
 
 
-def save_cookies(cookies_dic):
-    pass
+def save_cookies(cookies_dic,using_account):
+    try:
+        _cookies_dic = cookies_dic
+        if os.path.exists(COOKIES_FILE_PATH):
+            with open(COOKIES_FILE_PATH, 'r+') as f:
+                saving_cookies_dic = pickle.load(f)
+                if using_account in saving_cookies_dic.keys():
+                    saving_cookies_dic[using_account] = _cookies_dic
+                    pickle.dump(saving_cookies_dic,f)
+                    logger.info('update cookies of using account {}'.format(using_account))
+                else:
+                    saving_cookies_dic[using_account] = _cookies_dic
+                    pickle.dump(saving_cookies_dic,f)
+                    logger.info('saving cookies of using account {}'.format(using_account))
+        else:
+            with open(COOKIES_FILE_PATH, 'w') as f:
+                saving_cookies_dic = {using_account:_cookies_dic}
+                pickle.dump(saving_cookies_dic,f)
+    except Exception as e:
+        logger.error('saving cookies failed for' + str(e))
 
 
 def get_pwd_wsse(pwd, servertime, nonce):
@@ -198,8 +209,9 @@ if __name__ == '__main__':
         print 'Login WEIBO succeeded'
         #if you see the above message, then do whatever you want with urllib2, following is a example for fetch Kaifu's Weibo Home Page
         #Trying to fetch Kaifu Lee's Weibo home page
-        kaifu_page = urllib2.urlopen('http://www.weibo.com/kaifulee').read()
-        print kaifu_page
+        # test page
+        # kaifu_page = urllib2.urlopen('http://www.weibo.com/kaifulee').read()
+        # print kaifu_page
 
     else:
         print 'Login WEIBO failed'
