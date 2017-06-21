@@ -14,6 +14,7 @@ import binascii
 import requests
 import pickle
 from tools.logger import logger
+from lxml import etree
 
 COOKIES_FILE_PATH = 'setting/cookies.pkl'
 
@@ -120,20 +121,32 @@ def do_login(username,pwd,cookie_file):
     try:
         #Search login redirection URL
         trans_login_url = p.search(text).group(1)
-        _response = session.get(trans_login_url)
-        p = re.compile("framelogin\=(.*)\&callback")
-        data = _response.content
-        login_status = int(p.search(data).group(1))
-        # visit testing page
+        # if trans_login_url:
+        #     login_status = 1
+        # else:
+        #     login_status = 0
+        # _response = session.get(trans_login_url)
+        # p = re.compile("framelogin\=(.*)\&callback")
+        # data = _response.content
+        # login_status = int(p.search(data).group(1))
+        # # visit testing page
         testing_url = 'http://weibo.cn/u/1669879400?filter=0&page=1'
         __response = session.get(testing_url)
+        selector = etree.HTML(__response.content)
+        status = selector.xpath('//div[@class="tm"]')
+        if len(status):
+            login_status = 1
+        else:
+            login_status = 0
+
         cookies_dic = requests.utils.dict_from_cookiejar(session.cookies)
         if login_status:
             save_cookies(cookies_dic,username)
             return 1
         else:
             return 0
-    except:
+    except Exception as e:
+        logger.error('login failed for %s'%(str(e)))
         return 0
 
 

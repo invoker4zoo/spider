@@ -102,7 +102,7 @@ class WeiboCrawler(object):
         # getting user name
         try:
             selector = etree.HTML(self.html)
-            self.user_info['userName'] = selector.xpath('//table//div[@class="ut"]/span[1]/text()')[0]
+            self.user_info['userName'] = selector.xpath('//table//div[@class="ut"]/span[0]/text()')[0]
             logger.info('user name is %s'%self.user_info['userName'])
         except Exception as e:
             logger.error('getting user name failed for:{}'.format(str(e)))
@@ -185,6 +185,11 @@ class WeiboCrawler(object):
                             guid = re.findall(pattern, comment, re.M)
                             num_comment = int(guid[0])
                             single_content['numComment'] = num_comment
+
+                            # creat time
+                            str_time = info[i].xpath("div/span[@class='ct']")
+                            time_num = re.findall(pattern,str_time,re.M)
+                            pass
 
                             # save single_content
                             self._weibo_single_content_saved(single_content)
