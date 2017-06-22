@@ -132,7 +132,7 @@ def do_login(name, password):
         return '', None, None
 
     else:
-        rs, yundama_obj, cid, session = login_no_pincode(name, password, session, server_data)
+        rs, cid, session = login_no_pincode(name, password, session, server_data)
         if rs == 'login_need_pincode':
             # session = requests.Session()
             # su = get_encodename(name)
@@ -176,21 +176,25 @@ def get_session(name, password):
     url, cid, session = do_login(name, password)
 
     if url != '':
-        rs_cont = session.get(url, headers=headers)
-        login_info = rs_cont.text
-
-        u_pattern = r'"uniqueid":"(.*)",'
-        m = re.search(u_pattern, login_info)
-        if m and m.group(1):
+        _headers = headers
+        _headers['Host'] = 'passport.weibo.com'
+        # _response = requests.get(url, headers=_headers, verify=False, allow_redirects=False)
+        rs_cont = session.get(url, headers=_headers, verify=False, allow_redirects=False)
+        # login_info = rs_cont.text
+        #
+        # u_pattern = r'"uniqueid":"(.*)",'
+        # m = re.search(u_pattern, login_info)
+        if rs_cont.status_code == 302:
             # 访问微博官方账号看是否正常
-            check_url = 'http://weibo.com/2671109275/about'
+            # check_url = 'http://weibo.com/2671109275/about'
+            check_url = 'https://weibo.cn/u/1669879400?filter=1&page=1'
             resp = session.get(check_url, headers=headers)
             # 通过实验，目前发现未经过手机验证的账号是救不回来了...
             if resp.status_code == 403:
-                logger.error('账号{}已被冻结'.format(name))
+                logger.error(u'账号{}已被冻结'.format(name))
                 # freeze_account(name, 0)
                 return None
-            logger.info('本次登陆账号为:{}'.format(name))
+            logger.info(u'本次登陆账号为:{}'.format(name))
             return session
 
 
@@ -200,8 +204,11 @@ def get_session(name, password):
 if __name__ == '__main__':
     user_name = '412214410@qq.com'
     password = '4vYzvwdi'
+    # user_name = 'fansxiu94602@sina.cn'
+    # password = 'zolf004'
+    # zxcv1098@sina.cn/zxcv1234
     session = get_session(user_name, password)
     if session:
-        save_cookies(session.cookies.get_dict(),user_name)
+        save_cookies(session.cookies.get_dict(), user_name)
     else:
-        logger.error('本次账号{}登陆失败'.format(user_name))
+        logger.error(u'本次账号{}登陆失败'.format(user_name))
