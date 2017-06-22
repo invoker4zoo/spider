@@ -80,7 +80,14 @@ class WeiboCrawler(object):
         """
         headers = requests.utils.default_headers()
         user_agent = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko/20100101 Firefox/11.0'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko/20100101 Firefox/11.0',
+            # 'Cookie': self.cookie,
+            'Host': 'weibo.cn',
+            'Accept': 'text / html, application / xhtml + xml, application / xml; q = 0.9, image / webp, * / *;q = 0.8',
+            'Accept-Encoding':'gzip, deflate, sdch, br',
+            'Accept-Language':'zh - CN,zh;q = 0.8',
+            'Connection':'keep-alive',
+            'Upgrade-Insecure-Requests':1
         }
         headers.update(user_agent)
         self.headers = headers
@@ -94,6 +101,7 @@ class WeiboCrawler(object):
                 url = 'http://weibo.cn/%s?filter=%s&page=1' % (self.user_id, self.filter)
                 logger.info('crawl url is :{}'.format(url))
             self.html = requests.get(url, cookies=self.cookie, headers=self.headers).content
+            # self.html = requests.get(url, headers=self.headers).content
             logger.info('load html success')
         except Exception as e:
             logger.error('getting html failed for {}'.format(str(e)))
@@ -102,7 +110,7 @@ class WeiboCrawler(object):
         # getting user name
         try:
             selector = etree.HTML(self.html)
-            self.user_info['userName'] = selector.xpath('//table//div[@class="ut"]/span[0]/text()')[0]
+            self.user_info['userName'] = selector.xpath('//table//div[@class="ut"]/span/text()')[0]
             logger.info('user name is %s'%self.user_info['userName'])
         except Exception as e:
             logger.error('getting user name failed for:{}'.format(str(e)))
