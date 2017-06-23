@@ -151,21 +151,15 @@ def do_login(name, password):
 
 def save_cookies(cookies_dic,using_account):
     try:
-        _cookies_dic = cookies_dic
         if os.path.exists(COOKIES_FILE_PATH):
-            with open(COOKIES_FILE_PATH, 'r+') as f:
-                saving_cookies_dic = pickle.load(f)
-                if using_account in saving_cookies_dic.keys():
-                    saving_cookies_dic[using_account] = _cookies_dic
-                    pickle.dump(saving_cookies_dic,f)
-                    logger.info('update cookies of using account {}'.format(using_account))
-                else:
-                    saving_cookies_dic[using_account] = _cookies_dic
-                    pickle.dump(saving_cookies_dic,f)
-                    logger.info('saving cookies of using account {}'.format(using_account))
+            with open(COOKIES_FILE_PATH, 'r') as f:
+                saving_cookies_dic = dict(pickle.load(f))
+            with open(COOKIES_FILE_PATH, 'w') as f:
+                saving_cookies_dic[using_account] = cookies_dic
+                pickle.dump(saving_cookies_dic, f)
         else:
             with open(COOKIES_FILE_PATH, 'w') as f:
-                saving_cookies_dic = {using_account:_cookies_dic}
+                saving_cookies_dic = {using_account:cookies_dic}
                 pickle.dump(saving_cookies_dic,f)
     except Exception as e:
         logger.error('saving cookies failed for' + str(e))
@@ -179,18 +173,18 @@ def get_session(name, password):
         _headers = headers
         _headers['Host'] = 'passport.weibo.com'
         # _response = requests.get(url, headers=_headers, verify=False, allow_redirects=False)
-        rs_cont = session.get(url, headers=_headers, verify=False, allow_redirects=False)
+        rs_cont = session.get(url, verify=False, allow_redirects=False)
         # login_info = rs_cont.text
         #
         # u_pattern = r'"uniqueid":"(.*)",'
         # m = re.search(u_pattern, login_info)
         if rs_cont.status_code == 302:
             # 访问微博官方账号看是否正常
-            # check_url = 'http://weibo.com/2671109275/about'
-            check_url = 'https://weibo.cn/u/1669879400?filter=1&page=1'
-            resp = session.get(check_url, headers=headers)
+            check_url = 'http://weibo.com/2671109275/about'
+            # check_url = 'https://weibo.cn/u/1669879400'
+            resp = session.get(check_url)
             # 通过实验，目前发现未经过手机验证的账号是救不回来了...
-            if resp.status_code == 403:
+            if rs_cont.status_code == 403:
                 logger.error(u'账号{}已被冻结'.format(name))
                 # freeze_account(name, 0)
                 return None
@@ -206,9 +200,14 @@ if __name__ == '__main__':
     password = '4vYzvwdi'
     # user_name = 'fansxiu94602@sina.cn'
     # password = 'zolf004'
-    # zxcv1098@sina.cn/zxcv1234
+    # zxcv1098@sina.cn/zxcv1234_cookie
     session = get_session(user_name, password)
     if session:
-        save_cookies(session.cookies.get_dict(), user_name)
+        cookie_keys = ['SCF', 'SUB', 'SUHB', '_T_WM', 'SSOLoginState']
+        _cookie = ''
+        cookie_dict = session.cookies.get_dict()
+        for item in cookie_keys:
+            _cookie += item + '=' + cookie_dict[item] + ';'
+        save_cookies(_cookie[:-1], user_name)
     else:
         logger.error(u'本次账号{}登陆失败'.format(user_name))

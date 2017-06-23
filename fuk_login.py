@@ -120,7 +120,7 @@ def do_login(username,pwd,cookie_file):
     p = re.compile('location\.replace\(\'(.*?)\'\)')
     try:
         #Search login redirection URL
-        trans_login_url = p.search(text).group(1)
+        # trans_login_url = p.search(text).group(1)
         # if trans_login_url:
         #     login_status = 1
         # else:
@@ -130,7 +130,7 @@ def do_login(username,pwd,cookie_file):
         # data = _response.content
         # login_status = int(p.search(data).group(1))
         # # visit testing page
-        testing_url = 'http://weibo.cn/u/1669879400?filter=0&page=1'
+        testing_url = 'https://weibo.cn/u/1669879400'
         __response = session.get(testing_url)
         selector = etree.HTML(__response.content)
         status = selector.xpath('//div[@class="tm"]')
@@ -152,21 +152,15 @@ def do_login(username,pwd,cookie_file):
 
 def save_cookies(cookies_dic,using_account):
     try:
-        _cookies_dic = cookies_dic
         if os.path.exists(COOKIES_FILE_PATH):
-            with open(COOKIES_FILE_PATH, 'r+') as f:
-                saving_cookies_dic = pickle.load(f)
-                if using_account in saving_cookies_dic.keys():
-                    saving_cookies_dic[using_account] = _cookies_dic
-                    pickle.dump(saving_cookies_dic,f)
-                    logger.info('update cookies of using account {}'.format(using_account))
-                else:
-                    saving_cookies_dic[using_account] = _cookies_dic
-                    pickle.dump(saving_cookies_dic,f)
-                    logger.info('saving cookies of using account {}'.format(using_account))
+            with open(COOKIES_FILE_PATH, 'r') as f:
+                saving_cookies_dic = dict(pickle.load(f))
+            with open(COOKIES_FILE_PATH, 'w') as f:
+                saving_cookies_dic[using_account] = cookies_dic
+                pickle.dump(saving_cookies_dic, f)
         else:
             with open(COOKIES_FILE_PATH, 'w') as f:
-                saving_cookies_dic = {using_account:_cookies_dic}
+                saving_cookies_dic = {using_account:cookies_dic}
                 pickle.dump(saving_cookies_dic,f)
     except Exception as e:
         logger.error('saving cookies failed for' + str(e))

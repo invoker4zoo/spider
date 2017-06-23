@@ -67,9 +67,9 @@ class WeiboCrawler(object):
                 cookies_dict = pickle.load(f)
             cookies = cookies_dict[self.using_account]
             # debug cookies format
-            # cookie = {
-            #     "Cookie": cookies
-            # }
+            cookie = {
+                "Cookie": cookies
+            }
             self.cookie = cookies
         except Exception as e:
             logger.error('intial cookies failed for:' + str(e))
@@ -82,29 +82,20 @@ class WeiboCrawler(object):
         user_agent = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko/20100101 Firefox/11.0',
             # 'Cookie': self.cookie,
+            'Cookie':'_T_WM=f4d3cfb3694249a373e2fec2e1c18f96; SUB=_2A250SOFfDeThGeNO6lsU-CfJyDuIHXVXso8XrDV6PUJbkdAKLUf8kW09o6N4wRQoI-NvI-PvMUOOPnKtFQ..; SUHB=06ZVJOTYwUlHaO; SCF=AtjsPPzqXqHVMjFpeV4UM1w5dcdenHEFMfbnrvEkws7SO0-2fecPrsNQLONEBGFh-wsG-jNXQfVC6Z6B63LUZHM.; SSOLoginState=1498190095',
             'Host': 'weibo.cn',
             'Accept': 'text / html, application / xhtml + xml, application / xml; q = 0.9, image / webp, * / *;q = 0.8',
             'Accept-Encoding':'gzip, deflate, sdch, br',
             'Accept-Language':'zh - CN,zh;q = 0.8',
             'Connection':'keep-alive',
-            'Upgrade-Insecure-Requests':1
+            'Upgrade-Insecure-Requests':1,
+            'Cache - Control': 'max - age = 0'
         }
         headers.update(user_agent)
         self.headers = headers
 
     def _get_html(self):
-        try:
-            if is_number(self.user_id):
-                url = 'http://weibo.cn/u/%s?filter=%s&page=1' % (self.user_id, self.filter)
-                logger.info('crawl url is :{}'.format(url))
-            else:
-                url = 'http://weibo.cn/%s?filter=%s&page=1' % (self.user_id, self.filter)
-                logger.info('crawl url is :{}'.format(url))
-            self.html = requests.get(url, cookies=self.cookie, headers=self.headers).content
-            # self.html = requests.get(url, headers=self.headers).content
-            logger.info('load html success')
-        except Exception as e:
-            logger.error('getting html failed for {}'.format(str(e)))
+        pass
 
     def _get_user_info(self):
         # getting user name
@@ -140,10 +131,24 @@ class WeiboCrawler(object):
             logger.error('getting user info failed for:{}'.format(str(e)))
 
     def _get_weibo_info(self):
+        session = requests.session()
+        resp = session.get('http://weibo.cn/u/1669879400', headers=self.headers)
+        if is_number(self.user_id):
+            url = 'https://weibo.cn/u/%s' % self.user_id
+            logger.info('crawl url is :{}'.format(url))
+        else:
+            url = 'https://weibo.cn/%s' % self.user_id
+            logger.info('crawl url is :{}'.format(url))
+
+        self.html = session.get(url, headers=self.headers).content
+        # url2 = 'http://weibo.cn/%s' % self.user_id
+        # html2 = requests.post(url2, data={'mp': 2, 'page': 1},
+        #                       headers=self.headers).content
+
         selector = etree.HTML(self.html)
         pattern = r"\d+\.?\d*"
         try:
-            if selector.xpath('//input[@name="mp"]') is None:
+            if not len(selector.xpath('//input[@name="mp"]')):
                 page_num = 1
             else:
                 page_num = int(selector.xpath('//input[@name="mp"]')[0].attrib['value'])
@@ -151,9 +156,12 @@ class WeiboCrawler(object):
             try:
                 # traverse all weibo, and we will got weibo detail urls
                 # TODO: inside for loop must set sleep time to avoid banned by sina.
+                # post testing
+                # url2 = 'http://weibo.cn/%s'%self.user_id
+                # html2 = requests.post(url2, data={'mp':page_num,'page':2},cookies=self.cookie, headers=self.headers).content
                 for page in range(1, page_num):
-                    url2 = 'http://weibo.cn/%s?filter=%s&page=%s' % (self.user_id, self.filter, page)
-                    html2 = requests.get(url2, cookies=self.cookie, headers=self.headers).content
+                    url2 = 'https://weibo.cn/%s'%self.user_id
+                    html2 = session.post(url2, data={'mp':page_num,'page':page},headers=self.headers).content
                     selector2 = etree.HTML(html2)
                     info = selector2.xpath("//div[@class='c']")
                     logger.info('crawl No.%d page for user %s'%(page,self.user_info['userName']))
@@ -195,9 +203,12 @@ class WeiboCrawler(object):
                             single_content['numComment'] = num_comment
 
                             # creat time
-                            str_time = info[i].xpath("div/span[@class='ct']")
+                            str_time = info[i].xpath("div/span[@class='ct']/text()")[0]
+                            # pattern_time = re.compile(r"\d+")
                             time_num = re.findall(pattern,str_time,re.M)
-                            pass
+                            time_year = now().split('-')[0]
+                            time_str = '%s-%s-%s %s:%s'%(time_year,time_num[0],time_num[1],time_num[2],time_num[3])
+                            single_content['createTime'] = time_str
 
                             # save single_content
                             self._weibo_single_content_saved(single_content)
@@ -252,10 +263,10 @@ class WeiboCrawler(object):
         :return: crawl status
         """
         try:
-            self._get_html()
-            # self._get_user_name()
-            self._get_user_info()
+            # union get_html with get_weibo_info
+            # self._get_html()
             self._get_weibo_info()
+            self._get_user_info()
             # self._get_weibo_detail_comment()
 
             # save user info
