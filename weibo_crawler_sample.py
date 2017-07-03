@@ -6,15 +6,15 @@ import requests
 import pickle
 from lxml import etree
 import time
-from tools.tools import is_number,now
+from tools.tools import is_number,now,now_delta
 from tools.logger import logger
 from setting.config import COOKIES_SAVE_PATH
 from copy import deepcopy
 from pymongo import MongoClient
-
+import datetime
 
 time.time()
-MONGO = MongoClient('192.168.48.92', 27017)
+MONGO = MongoClient('192.168.49.111', 27017)
 DB_NAME, COLL_NAME_USER, COLL_NAME_CONTENT = 'weibo', 'userInfo', 'weiboContent'
 
 class WeiboCrawler(object):
@@ -82,7 +82,7 @@ class WeiboCrawler(object):
         user_agent = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko/20100101 Firefox/11.0',
             # 'Cookie': self.cookie,
-            'Cookie':'_T_WM=f4d3cfb3694249a373e2fec2e1c18f96; SUB=_2A250SOFfDeThGeNO6lsU-CfJyDuIHXVXso8XrDV6PUJbkdAKLUf8kW09o6N4wRQoI-NvI-PvMUOOPnKtFQ..; SUHB=06ZVJOTYwUlHaO; SCF=AtjsPPzqXqHVMjFpeV4UM1w5dcdenHEFMfbnrvEkws7SO0-2fecPrsNQLONEBGFh-wsG-jNXQfVC6Z6B63LUZHM.; SSOLoginState=1498190095',
+            'Cookie':self.cookie,
             'Host': 'weibo.cn',
             'Accept': 'text / html, application / xhtml + xml, application / xml; q = 0.9, image / webp, * / *;q = 0.8',
             'Accept-Encoding':'gzip, deflate, sdch, br',
@@ -203,13 +203,33 @@ class WeiboCrawler(object):
                             single_content['numComment'] = num_comment
 
                             # creat time
-                            str_time = info[i].xpath("div/span[@class='ct']/text()")[0]
-                            # pattern_time = re.compile(r"\d+")
-                            time_num = re.findall(pattern,str_time,re.M)
-                            time_year = now().split('-')[0]
-                            time_str = '%s-%s-%s %s:%s'%(time_year,time_num[0],time_num[1],time_num[2],time_num[3])
-                            single_content['createTime'] = time_str
-
+                            # need debugging
+                            # format 1: 6分钟前
+                            # format 2(与当前时间为同一年):08月08日 18:43
+                            # format 3:2016-08-08 18:36:58
+                            # format 4:今天15：03
+                            try:
+                                str_time = info[i].xpath("div/span[@class='ct']/text()")[0]
+                                str_time = str_time.split(u'来自')[0]
+                                # pattern_time = re.compile(r"\d+")
+                                time_num = re.findall(pattern,str_time,re.M)
+                                if len(time_num) == 4:
+                                    time_year = now().strftime('%Y-%m-%d').split('-')[0]
+                                    time_str = '%s-%s-%s %s:%s'%(time_year,time_num[0],time_num[1],time_num[2],time_num[3])
+                                    single_content['createTime'] = datetime.datetime.strptime(time_str, '%Y-%m-%d %H:%M')
+                                elif len(time_num) == 2:
+                                    time_year = now().strftime('%Y-%m-%d')
+                                    time_str = '%s %s:%s'%(time_year,time_num[0],time_num[1])
+                                    single_content['createTime'] = datetime.datetime.strptime(time_str, '%Y-%m-%d %H:%M')
+                                elif len(time_num) == 1:
+                                    single_content['createTime'] = now_delta(int(time_num[0]))
+                                elif len(time_num) == 6:
+                                    single_content['createTime'] = datetime.datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
+                                else:
+                                    single_content['createTime'] = now()
+                            except Exception as e:
+                                logger.error('time parse failed for %s'%str(e))
+                                single_content['createTime'] = now()
                             # save single_content
                             self._weibo_single_content_saved(single_content)
                             # logger.info('get weibo content success:{}'.format(single_content))
@@ -281,6 +301,7 @@ class WeiboCrawler(object):
 if __name__ == '__main__':
     user_id = '412214410@qq.com'
     uuid = 1669879400
+    uuid = 2255204057
     filter_flag = 1
     wb = WeiboCrawler(user_id, uuid, filter_flag)
     if wb.crawl():
