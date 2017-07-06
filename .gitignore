@@ -103,7 +103,8 @@ ENV/
 # log file
 *.log
 **/*.log
-log/
+log/*
+*/log/*
 
 # setting
 setting/cookies.pkl
