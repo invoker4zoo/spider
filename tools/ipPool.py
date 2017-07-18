@@ -23,6 +23,23 @@ class ipPool(dbConnector):
         except Exception as e:
             logger.error('get all ip failed for %s'%str(e))
 
+    def get_count_ip(self, limit=10):
+
+        try:
+            result = list()
+            for record in self.collection.aggregate(
+                    [
+                        {'$match': {'score': {'$gte': 10}}},
+                        {'$limit': limit},
+                        {'$project': {'_id': 0, 'ip': 1, 'port': 1}}
+                    ]
+            ).batch_size(1):
+                result.append(record)
+
+            return result
+
+        except Exception as e:
+            logger.error('get count ip failed for %s' % str(e))
 
 
 if __name__ == "__main__":

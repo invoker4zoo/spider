@@ -187,6 +187,16 @@ class WeiboCrawler(object):
                             single_content['content'] = weibos
                             # print(weibos)
 
+                            # pic source url
+                            try:
+                                result = info[i].xpath("div/a/img/@src")
+                                if len(result):
+                                    single_content['picUrl'] = result[0]
+                                else:
+                                    single_content['picUrl'] = ''
+                            except Exception as e :
+                                logger.error('get picture url failed for %s'%str(e))
+
                             str_zan = info[i].xpath("div/a/text()")[-4]
                             guid = re.findall(pattern, str_zan, re.M)
                             num_zan = int(guid[0])
