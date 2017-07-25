@@ -132,7 +132,7 @@ class WeiboCrawler(object):
 
     def _get_weibo_info(self):
         session = requests.session()
-        resp = session.get('http://weibo.cn/u/1669879400', headers=self.headers)
+        # resp = session.get('http://weibo.cn/u/1669879400', headers=self.headers)
         if is_number(self.user_id):
             url = 'https://weibo.cn/u/%s' % self.user_id
             logger.info('crawl url is :{}'.format(url))
