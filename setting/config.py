@@ -8,7 +8,10 @@ accounts = {
     '412214410@qq.com':'4vYzvwdi',
 }
 
+MONGO_IP = '192.168.45.140'
+MONGO_PORT = 27017
 
+DEFAULT_ID = 1669879400
 SEEKING_ID = [
     'cqrb',
     2846622504,

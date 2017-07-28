@@ -1,0 +1,9 @@
+requests==2.2.1
+pymongo==3.4.0
+lxml==3.3.3
+selenium==3.4.3
+pika==0.10.0
+
+
+
+

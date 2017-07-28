@@ -6,15 +6,15 @@ import requests
 import pickle
 from lxml import etree
 import time
-from tools.tools import is_number,now,now_delta
+from tools.tools import is_number, now, now_delta
 from tools.logger import logger
-from setting.config import COOKIES_SAVE_PATH
+from setting.config import COOKIES_SAVE_PATH, MONGO_IP, MONGO_PORT
 from copy import deepcopy
 from pymongo import MongoClient
 import datetime
 
-time.time()
-MONGO = MongoClient('192.168.49.111', 27017)
+# time.time()
+MONGO = MongoClient(MONGO_IP, MONGO_PORT)
 DB_NAME, COLL_NAME_USER, COLL_NAME_CONTENT = 'weibo', 'userInfo', 'weiboContent'
 
 class WeiboCrawler(object):
@@ -295,12 +295,14 @@ class WeiboCrawler(object):
         try:
             # union get_html with get_weibo_info
             # self._get_html()
-            self._get_weibo_info()
+
             self._get_user_info()
             # self._get_weibo_detail_comment()
-
             # save user info
             self._weibo_user_info_saved(self.user_info)
+            # get uid contents info
+            self._get_weibo_info()
+
             logger.info('crawl for user:%d done'%self.user_id)
             return True
         except Exception as e:

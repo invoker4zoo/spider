@@ -10,7 +10,7 @@
 """
 
 from weibo_crawler_sample import WeiboCrawler
-from setting.config import COOKIES_SAVE_PATH, accounts
+from setting.config import COOKIES_SAVE_PATH, accounts,SEEKING_ID
 from tools.logger import logger
 from phantom_login import get_cookie_from_network
 import pickle
@@ -31,9 +31,9 @@ class Dispatch(object):
         self.account_list = self.account_dic.keys()
         self.cookies_path = cookies_path
         self.update_cookies = update_cookies
+        self.used_account = list()
         self.using_account = self.choose_using_account()
         self.retry = retry
-        self.used_account = list()
 
         self._init_accounts_cookies()
         # self._init_cookie_dic()
@@ -74,12 +74,16 @@ class Dispatch(object):
         self.used_account.append(choose_account)
         return choose_account
 
-    def _execute(self):
+    def execute(self):
         while 1:
             try:
-                WeiboCrawler(self.using_account, self.uid, self.filter_flag)
-                logger.info('execute weibo crawler success for user %s'%str(self.uid))
-                break
+                wb = WeiboCrawler(self.using_account, self.uid, self.filter_flag)
+                if wb.crawl():
+                    logger.info('execute weibo crawler success for user %s'%str(self.uid))
+                    break
+                else:
+                    logger.info('execute weibo crawler failed for user %s' % str(self.uid))
+                    break
             except Exception,e:
                 logger.error('execute weibo crawler failed %s with account'%(str(e),self.using_account))
                 if self.retry:
@@ -91,3 +95,10 @@ class Dispatch(object):
                         break
                 else:
                     break
+
+
+if __name__ == '__main__':
+    logger.info('begin testing')
+    for uid in SEEKING_ID:
+        dispatch = Dispatch(uid=uid)
+        dispatch.execute()
