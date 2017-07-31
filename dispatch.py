@@ -72,6 +72,7 @@ class Dispatch(object):
     def choose_using_account(self):
         choose_account = random.sample(self.account_list, 1)[0]
         self.used_account.append(choose_account)
+        logger.info('choosing [%s] account'%choose_account)
         return choose_account
 
     def execute(self):
@@ -100,5 +101,5 @@ class Dispatch(object):
 if __name__ == '__main__':
     logger.info('begin testing')
     for uid in SEEKING_ID:
-        dispatch = Dispatch(uid=uid)
+        dispatch = Dispatch(uid=uid, update_cookies=True, retry=True)
         dispatch.execute()

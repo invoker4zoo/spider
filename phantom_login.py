@@ -88,4 +88,7 @@ def get_cookie_from_network(account_id, account_password):
 if __name__ == '__main__':
     account = '412214410@qq.com'
     password = '4vYzvwdi'
+    account = '17031043041'
+    password = 'rs576833'
+
     get_cookie_from_network(account,password)

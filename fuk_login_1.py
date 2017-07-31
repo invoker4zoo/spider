@@ -13,7 +13,7 @@ import urllib
 from tools.logger import logger
 import pickle
 
-COOKIES_FILE_PATH = 'setting/cookies.pkl'
+COOKIES_FILE_PATH = 'setting/cookies_test.pkl'
 index_url = "http://weibo.com/login.php"
 headers = {
     'User-Agent': 'Mozilla/5.0 (X11; Linux i686; rv:8.0) Gecko/20100101 Firefox/8.0',
@@ -198,6 +198,8 @@ def get_session(name, password):
 if __name__ == '__main__':
     user_name = '412214410@qq.com'
     password = '4vYzvwdi'
+    user_name = '17031043041'
+    password = 'rs576833'
     # user_name = 'fansxiu94602@sina.cn'
     # password = 'zolf004'
     # zxcv1098@sina.cn/zxcv1234_cookie
